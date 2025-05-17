@@ -6,6 +6,7 @@ namespace roboplan {
 
 NB_MODULE(roboplan, m) {
     m.def("add", &add);
+    m.def("createPinocchioModel", &createPinocchioModel);
 }
 
 }  // namespace roboplan

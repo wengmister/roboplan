@@ -10,4 +10,7 @@ namespace roboplan {
 /// @return The sum of the two numbers
 int add(int a, int b);
 
+/// @brief Creates a dummy Pinocchio model. 
+void createPinocchioModel();
+
 }  // namespace roboplan

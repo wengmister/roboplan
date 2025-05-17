@@ -15,6 +15,10 @@ add_library (roboplan SHARED
     src/utils.cpp
 )
 target_include_directories(roboplan PRIVATE include)
+target_link_libraries(roboplan
+    Eigen3::Eigen
+    pinocchio::pinocchio
+)
 
 install(
   TARGETS
