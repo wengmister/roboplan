@@ -15,7 +15,10 @@ add_library(roboplan SHARED
     src/core/scene.cpp
     src/core/types.cpp
 )
-target_include_directories(roboplan PRIVATE include)
+target_include_directories(roboplan PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
 target_link_libraries(roboplan
     Eigen3::Eigen
     pinocchio::pinocchio
@@ -78,11 +81,14 @@ install(TARGETS roboplan
         INCLUDES DESTINATION include
         )
 
+# Add the unit tests, if enabled.
+if (BUILD_TESTING)
+    add_subdirectory(test)
+endif()
+
 # If ament_cmake is detected, export the package to be visible in ROS 2.
 find_package(ament_cmake QUIET)
 if ( ament_cmake_FOUND )
-
     message(STATUS "ament_cmake found. Exporting for ROS 2.")
     ament_package()
-
 endif()

@@ -12,7 +12,10 @@ find_package(roboplan REQUIRED)
 add_library(roboplan_simple_ik SHARED
     src/simple_ik.cpp
 )
-target_include_directories(roboplan_simple_ik PRIVATE include)
+target_include_directories(roboplan_simple_ik PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
 target_link_libraries(roboplan_simple_ik
     roboplan::roboplan
 )
@@ -77,8 +80,6 @@ install(TARGETS roboplan_simple_ik
 # If ament_cmake is detected, export the package to be visible in ROS 2.
 find_package(ament_cmake QUIET)
 if ( ament_cmake_FOUND )
-
     message(STATUS "ament_cmake found. Exporting for ROS 2.")
     ament_package()
-
 endif()
