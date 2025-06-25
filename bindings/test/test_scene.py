@@ -8,15 +8,15 @@ import pytest
 import numpy as np
 
 import roboplan
-from roboplan.utils import get_example_resources_directory, get_package_path
+from roboplan import get_package_share_dir
 
 
 @pytest.fixture
 def test_scene() -> roboplan.Scene:
-    roboplan_examples_dir = Path(get_example_resources_directory())
+    roboplan_examples_dir = Path(get_package_share_dir())
     urdf_path = roboplan_examples_dir / "ur_robot_model" / "ur5_gripper.urdf"
     srdf_path = roboplan_examples_dir / "ur_robot_model" / "ur5_gripper.srdf"
-    package_paths = [get_package_path()]
+    package_paths = [roboplan_examples_dir]
 
     return roboplan.Scene("test_scene", urdf_path, srdf_path, package_paths)
 
