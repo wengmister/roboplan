@@ -74,28 +74,18 @@ JointPath PathShortcutter::shortcut(const JointPath& path, double max_step_size,
   std::uniform_real_distribution<double> dis(std::numeric_limits<double>::epsilon(), 1.0);
 
   q_full_ = scene_->getCurrentJointPositions();
-  bool path_changed = true;
+  auto q_start = q_full_;
+  auto q_end = q_full_;
+
   const auto& q_indices = joint_group_info_.q_indices;
   for (unsigned int i = 0; i < max_iters; ++i) {
     if (path_configs.size() < 3) {
       // The path is at maximum shortcutted-ness
       return shortened_path;
-    } else if (path_changed && (path_configs.size() == 3)) {
-      // If the path has exactly 3 points, exclusively try to bypass the middle one
-      auto q_start = q_full_;
-      q_start(q_indices) = path_configs[0];
-      auto q_end = q_full_;
-      q_end(q_indices) = path_configs[2];
-
-      if (!hasCollisionsAlongPath(*scene_, q_start, q_end, max_step_size)) {
-        path_configs.erase(path_configs.begin() + 1);
-        return shortened_path;
-      }
     }
 
     // Recompute the path scalings every iteration. If we can't compute these we can
     // assume we are done (the path is at maximum shortness).
-    path_changed = false;
     const auto path_scalings_maybe = getNormalizedPathScaling(shortened_path);
     if (!path_scalings_maybe.has_value()) {
       return shortened_path;
@@ -108,25 +98,48 @@ JointPath PathShortcutter::shortcut(const JointPath& path, double max_step_size,
     if (low > high) {
       std::swap(low, high);
     }
-    const auto [q_low, idx_low] =
+    auto [q_low, idx_low] =
         getConfigurationFromNormalizedPathScaling(shortened_path, path_scalings, low);
-    const auto [q_high, idx_high] =
+    auto [q_high, idx_high] =
         getConfigurationFromNormalizedPathScaling(shortened_path, path_scalings, high);
-    if (idx_low == idx_high) {
+
+    // Samples are on the same segment so shortening would have no effect.
+    if (idx_high == idx_low) {
       continue;
     }
 
-    // Check if the sampled segment is collision free. If it is, shortcut the path by updating
-    // the configs vector in place. We connect the low and high configurations directly, and
-    // erase the intermediate nodes (if any).
-    if (!hasCollisionsAlongPath(*scene_, q_low, q_high, max_step_size)) {
-      path_configs[idx_low] = q_low(q_indices);
-      path_configs[idx_high] = q_high(q_indices);
-      if (idx_high > idx_low + 1) {
-        path_configs.erase(path_configs.begin() + idx_low + 1, path_configs.begin() + idx_high);
-      }
-      path_changed = true;
+    // We generally want the new path to be:
+    //
+    // q_start - > q_low -> q_high -> q_end
+    //
+    // Because q_low and q_high exist on valid segments, we do not need to check the preceding
+    // and following connections. We ONLY need to ensure that q_low and q_high are directly
+    // connectable!
+    //
+    // However, if  `q_start` and `q_low` or `q_high` and `q_end` are very close to each other,
+    // it doesn't make sense to add new configurations. If this is the case, use the existing
+    // configuration as the sample.
+    q_start(q_indices) = path_configs[idx_low - 1];
+    if (scene_->configurationDistance(q_start, q_low) < max_step_size) {
+      q_low = q_start;
+      idx_low--;  // Remove the existing configuration
     }
+
+    q_end(q_indices) = path_configs[idx_high];
+    if (scene_->configurationDistance(q_high, q_end) < max_step_size) {
+      q_high = q_end;
+      idx_high++;  // Remove the existing configuration
+    }
+
+    // Ensure the new connection is valid. If not, try again.
+    if (hasCollisionsAlongPath(*scene_, q_low, q_high, max_step_size)) {
+      continue;
+    }
+
+    // Erase elements from idx_low to idx_high (exclusive).
+    path_configs.erase(path_configs.begin() + idx_low, path_configs.begin() + idx_high);
+    path_configs.insert(path_configs.begin() + idx_low, q_high(q_indices));
+    path_configs.insert(path_configs.begin() + idx_low, q_low(q_indices));
   }
 
   return shortened_path;
@@ -148,7 +161,6 @@ tl::expected<Eigen::VectorXd, std::string> PathShortcutter::getPathLengths(const
   for (size_t idx = 0; idx < path.positions.size() - 1; ++idx) {
     q_start(joint_group_info_.q_indices) = path.positions[idx];
     q_end(joint_group_info_.q_indices) = path.positions[idx + 1];
-
     path_length += scene_->configurationDistance(q_start, q_end);
     path_length_list(idx + 1) = path_length;
   }

@@ -109,7 +109,9 @@ def main(
     if include_shortcutting:
         shortcutter = PathShortcutter(scene, model_data.default_joint_group)
         shortened_path = shortcutter.shortcut(
-            path, options.collision_check_step_size, 1000
+            path,
+            max_step_size=options.collision_check_step_size,
+            max_iters=1000,
         )
 
     # Visualize the tree and path

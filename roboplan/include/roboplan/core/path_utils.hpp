@@ -41,7 +41,8 @@ public:
 
   /// @brief Attempts to shortcut a specified path.
   /// @param path The JointPath to try to shorten.
-  /// @param max_step_size Maximum step size to use in collision checking.
+  /// @param max_step_size Maximum step size to use in collision checking, and the minimum
+  /// separable distance between points in a shortcut.
   /// @param max_iters Maximum number of iterations of random sampling (default 100).
   /// @param seed Seed for the random generator, if < 0 then use a random seed (default -1).
   /// @return A shortcutted JointPath, if available.
