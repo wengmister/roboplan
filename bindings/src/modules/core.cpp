@@ -134,7 +134,16 @@ void init_core_scene(nanobind::module_& m) {
            "max_samples"_a = 1000)
       .def("hasCollisions", &Scene::hasCollisions, "q"_a, "debug"_a = false)
       .def("isValidPose", &Scene::isValidPose)
-      .def("applyMimics", &Scene::applyMimics)
+      // Modification is not guaranteed to be done in place for python objects, as they
+      // may be copied by nanobind. To guarantee values are correctly updated, we use
+      // a lambda function to return a reference to the changed value.
+      .def(
+          "applyMimics",
+          [](const Scene& self, Eigen::VectorXd& q) -> Eigen::VectorXd {
+            self.applyMimics(q);
+            return q;
+          },
+          "q"_a)
       .def("toFullJointPositions", &Scene::toFullJointPositions)
       .def("interpolate", &Scene::interpolate)
       .def("forwardKinematics", &Scene::forwardKinematics)
