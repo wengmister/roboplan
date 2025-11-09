@@ -79,6 +79,17 @@ nanobind_add_module(
   ${ROBOPLAN_EXT_SOURCES}
 )
 
+# Generate Python stub files from the bindings.
+nanobind_add_stub(
+  roboplan_ext_stub
+  MODULE roboplan_ext
+  RECURSIVE
+  OUTPUT roboplan_ext.pyi
+  MARKER_FILE py.typed
+  PYTHON_PATH $<TARGET_FILE_DIR:roboplan_ext>
+  DEPENDS roboplan_ext
+)
+
 # Configure the extension module
 target_include_directories(roboplan_ext PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -99,10 +110,27 @@ if(AMENT_BUILD)
   install(TARGETS roboplan_ext
     LIBRARY DESTINATION "${PYTHON_INSTALL_DIR}/roboplan"
   )
+  install(
+    DIRECTORY "${CMAKE_BINARY_DIR}/roboplan_ext/"
+    DESTINATION "${PYTHON_INSTALL_DIR}/roboplan"
+  )
   ament_python_install_package(roboplan
     PACKAGE_DIR src/roboplan
   )
   ament_package()
 else()
   install(TARGETS roboplan_ext LIBRARY DESTINATION roboplan)
+  install(
+    DIRECTORY "${CMAKE_BINARY_DIR}/roboplan_ext/"
+    DESTINATION roboplan
+  )
 endif()
+
+# Copy the stub files to the source folder for docs and versioning.
+# For now, this step has to be run manually when submitting changes.
+# It might be good to make a CI action that generates this and finds mismatches,
+# prompting the user to regenerate it on their own.
+install(
+  DIRECTORY "${CMAKE_BINARY_DIR}/roboplan_ext"
+  DESTINATION "${CMAKE_SOURCE_DIR}/src/roboplan"
+)
