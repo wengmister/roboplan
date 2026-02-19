@@ -14,9 +14,27 @@ find_package(roboplan REQUIRED)
 # Try to find OsqpEigen
 find_package(OsqpEigen QUIET)
 
+option(
+  ROBOPLAN_OINK_FORCE_BUNDLED_OSQP
+  "When OsqpEigen is not installed, always build OSQP from source and disable system osqp package lookup to avoid API mismatches."
+  ON
+)
+
 if(NOT OsqpEigen_FOUND)
-  # When building OsqpEigen from source, we need OSQP >= 1.0.0
-  find_package(osqp QUIET)
+  # When building OsqpEigen from source, we need OSQP >= 1.0.0.
+  # Default behavior avoids mixing system/ROS OSQP with vendored OsqpEigen.
+  if(ROBOPLAN_OINK_FORCE_BUNDLED_OSQP)
+    set(
+      CMAKE_DISABLE_FIND_PACKAGE_osqp
+      ON
+      CACHE BOOL "Disable find_package(osqp) to avoid mixed OSQP/OsqpEigen APIs."
+      FORCE
+    )
+    set(osqp_FOUND FALSE)
+    message(STATUS "ROBOPLAN_OINK_FORCE_BUNDLED_OSQP=ON: using vendored OSQP + OsqpEigen.")
+  else()
+    find_package(osqp QUIET)
+  endif()
 
   if(NOT osqp_FOUND OR osqp_VERSION VERSION_LESS "1.0.0")
     message(STATUS "OSQP not found or version < 1.0.0. Fetching from GitHub...")
