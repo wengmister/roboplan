@@ -11,19 +11,22 @@ include(FetchContent)
 # Find dependencies.
 find_package(roboplan REQUIRED)
 
+# Ament CMake is not immediately required, but we include it at the top so that
+# if it is found we can use it in build testing before requiring a
+# find_package(ament_cmake_test REQUIRED). Otherwise this can cause infinite recursion
+# issues with symlink installs.
+find_package(ament_cmake QUIET)
+
 # Try to find OsqpEigen
 find_package(OsqpEigen QUIET)
 
-option(
-  ROBOPLAN_OINK_FORCE_BUNDLED_OSQP
-  "When OsqpEigen is not installed, always build OSQP from source and disable system osqp package lookup to avoid API mismatches."
-  ON
-)
-
 if(NOT OsqpEigen_FOUND)
   # When building OsqpEigen from source, we need OSQP >= 1.0.0.
-  # Default behavior avoids mixing system/ROS OSQP with vendored OsqpEigen.
-  if(ROBOPLAN_OINK_FORCE_BUNDLED_OSQP)
+  find_package(osqp QUIET)
+
+  # ROS osqp vendor package can set osqp_FOUND without osqp_VERSION.
+  # Disable follow-up osqp package lookup so OsqpEigen uses the vendored OSQP.
+  if(ament_cmake_FOUND AND osqp_FOUND AND NOT DEFINED osqp_VERSION)
     set(
       CMAKE_DISABLE_FIND_PACKAGE_osqp
       ON
@@ -31,9 +34,7 @@ if(NOT OsqpEigen_FOUND)
       FORCE
     )
     set(osqp_FOUND FALSE)
-    message(STATUS "ROBOPLAN_OINK_FORCE_BUNDLED_OSQP=ON: using vendored OSQP + OsqpEigen.")
-  else()
-    find_package(osqp QUIET)
+    message(STATUS "Detected osqp package without osqp_VERSION; forcing vendored OSQP + OsqpEigen.")
   endif()
 
   if(NOT osqp_FOUND OR osqp_VERSION VERSION_LESS "1.0.0")
@@ -80,12 +81,6 @@ if(NOT OsqpEigen_FOUND)
   )
   FetchContent_MakeAvailable(osqp-eigen)
 endif()
-
-# Ament CMake is not immediately required, but we include it at the top so that
-# if it is found we can use it in build testing before requiring a
-# find_package(ament_cmake_test REQUIRED). Otherwise this can cause infinite recursion
-# issues with symlink installs.
-find_package(ament_cmake QUIET)
 
 # Add libraries
 add_library(roboplan_oink SHARED
